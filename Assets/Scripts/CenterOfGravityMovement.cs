@@ -9,10 +9,10 @@ using Random = UnityEngine.Random;
 public class CenterOfGravityMovement : MonoBehaviour
 {
     [Header("Rotation")] [SerializeField] private float rotationSpeed = 25f;
-    [SerializeField] private float drunkRotationSpeed = 5f;
+    [SerializeField] private float drunkRotationSpeed = 7f;
 
-    [Header("Random")] [SerializeField] private float randomRotationSpeed = 3f;
-    [SerializeField] private Vector2 randomTimerRange = new Vector2(0.2f, 1f);
+    [Header("Random")] [SerializeField] private float randomRotationSpeed = 7f;
+    [SerializeField] private Vector2 randomTimerRange = new Vector2(1f, 3f);
 
     [Header("Movement")] [SerializeField] private float turnSpeed = 1f;
     [SerializeField] private float maxMoveStrength = 500f;
@@ -23,6 +23,7 @@ public class CenterOfGravityMovement : MonoBehaviour
 
     private Vector2 _randomRotateDirection = Vector2.zero;
     private float _randomTimer;
+    private bool _wasted;
 
     private void Start()
     {
@@ -32,18 +33,48 @@ public class CenterOfGravityMovement : MonoBehaviour
         StartCoroutine(nameof(RandomRotationCoroutine));
     }
 
-    private void OnDrawGizmos()
-    {
-        Gizmos.color = Color.red;
-        Gizmos.DrawSphere(new Vector3(_randomRotateDirection.x, 1, _randomRotateDirection.y) + transform.position, .2f);
-    }
-
     void Update()
     {
+        if (_wasted)
+            if (Input.GetKey(KeyCode.Space))
+                ResetPlayer();
+            else
+                return;
+
         RotatePlayer();
         TurnPlayer();
         AddExtraRotation();
         AddRandomRotation();
+
+        CheckForRagdoll();
+    }
+
+    private void ResetPlayer()
+    {
+        _wasted = false;
+        _transform.position = Vector3.up;
+        _transform.rotation = Quaternion.identity;
+        _rigidbody.constraints = RigidbodyConstraints.FreezeRotation;
+
+        StartCoroutine(nameof(RandomRotationCoroutine));
+    }
+
+    private void CheckForRagdoll()
+    {
+        Vector2 angles = GetNegativeAllowedXZRotation();
+
+        if (!(Mathf.Abs(angles.x) > maxWalkingAngle) && !(Mathf.Abs(angles.y) > maxWalkingAngle)) return;
+
+        GetWasted();
+    }
+
+    private void GetWasted()
+    {
+        Debug.Log("Wasted");
+        _wasted = true;
+        _rigidbody.constraints = RigidbodyConstraints.None;
+
+        StopCoroutine(nameof(RandomRotationCoroutine));
     }
 
     private IEnumerator RandomRotationCoroutine()
