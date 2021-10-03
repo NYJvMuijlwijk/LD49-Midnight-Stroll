@@ -43,7 +43,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 67907ef0ea918e94d80c8b07e22f9e91, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  car: {fileID: 4307020471962971967, guid: 9c75f4e79c4d19a4b96f6f27c463e19d, type: 3}
+  car: {fileID: 1037153834884291417, guid: 5226fad5190a354408825f69ba5295e5, type: 3}
   spawnTimingRange: {x: 4, y: 6}
   spawnLifetime: 12
   active: 1

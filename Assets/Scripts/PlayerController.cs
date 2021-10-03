@@ -8,17 +8,20 @@ using Random = UnityEngine.Random;
 public class PlayerController : MonoBehaviour
 {
     [SerializeField] private Transform spawnPosition;
+    [SerializeField] private Transform backTransform;
 
     [Header("Rotation")] [SerializeField] private float rotationSpeed = 25f;
-    [SerializeField] private float drunkRotationSpeed = 7f;
+    [SerializeField] private float drunkRotationSpeed = 8f;
 
-    [Header("Random")] [SerializeField] private float randomRotationSpeed = 7f;
+    [Header("Random")] [SerializeField] private float randomRotationSpeed = 5f;
     [SerializeField] private Vector2 randomTimerRange = new Vector2(1f, 3f);
 
     [Header("Movement")] [SerializeField] private float turnSpeed = 1f;
     [SerializeField] private float maxMoveStrength = 500f;
     [SerializeField] private float carImpactStrength = 15f;
     [SerializeField] private float maxWalkingAngle = 30f;
+    [SerializeField] private float walkingHeight = 1f;
+    [SerializeField] private LayerMask hitMask = 6;
 
     [HideInInspector] public bool wasted;
 
@@ -51,10 +54,21 @@ public class PlayerController : MonoBehaviour
 
         RotatePlayer();
         TurnPlayer();
-        AddExtraRotation();
-        AddRandomRotation();
+        // AddExtraRotation();
+        // AddRandomRotation();
+
+        MaintainStanding();
 
         CheckForRagdoll();
+    }
+
+    private void MaintainStanding()
+    {
+        Ray groundRay = new Ray(_rigidbody.position, Vector3.down);
+        if (Physics.Raycast(groundRay, out RaycastHit hit, walkingHeight, hitMask))
+        {
+            _rigidbody.position += Vector3.up * (walkingHeight - hit.distance);
+        }
     }
 
     private void OnCollisionEnter(Collision other)
