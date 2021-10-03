@@ -1,13 +1,14 @@
 using System;
 using System.Collections;
-using Unity.VisualScripting;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
 [RequireComponent(typeof(Rigidbody))]
 [RequireComponent(typeof(Collider))]
-public class CenterOfGravityMovement : MonoBehaviour
+public class PlayerController : MonoBehaviour
 {
+    [SerializeField] private Transform spawnPosition;
+
     [Header("Rotation")] [SerializeField] private float rotationSpeed = 25f;
     [SerializeField] private float drunkRotationSpeed = 7f;
 
@@ -16,30 +17,37 @@ public class CenterOfGravityMovement : MonoBehaviour
 
     [Header("Movement")] [SerializeField] private float turnSpeed = 1f;
     [SerializeField] private float maxMoveStrength = 500f;
+    [SerializeField] private float carImpactStrength = 15f;
     [SerializeField] private float maxWalkingAngle = 30f;
+
+    [HideInInspector] public bool wasted;
+
+    public event Action PlayerDeath;
 
     private Transform _transform;
     private Rigidbody _rigidbody;
 
     private Vector2 _randomRotateDirection = Vector2.zero;
     private float _randomTimer;
-    private bool _wasted;
 
-    private void Start()
+    #region UnityEvents
+
+    private void Awake()
     {
         _transform = transform;
         _rigidbody = GetComponent<Rigidbody>();
+    }
+
+    private void Start()
+    {
         SetRandomMovementVariables();
         StartCoroutine(nameof(RandomRotationCoroutine));
     }
 
-    void Update()
+    private void Update()
     {
-        if (_wasted)
-            if (Input.GetKey(KeyCode.Space))
-                ResetPlayer();
-            else
-                return;
+        if (wasted)
+            return;
 
         RotatePlayer();
         TurnPlayer();
@@ -49,15 +57,52 @@ public class CenterOfGravityMovement : MonoBehaviour
         CheckForRagdoll();
     }
 
-    private void ResetPlayer()
+    private void OnCollisionEnter(Collision other)
     {
-        _wasted = false;
-        _transform.position = Vector3.up;
-        _transform.rotation = Quaternion.identity;
+        if (!other.gameObject.CompareTag("Car")) return;
+
+        if (!wasted)
+            Die();
+
+        Vector3 direction = _transform.position - other.transform.position;
+
+        _rigidbody.AddForce(direction.normalized * carImpactStrength, ForceMode.Impulse);
+    }
+
+    #endregion
+
+    #region Public
+
+    public void ResetPlayer()
+    {
+        wasted = false;
+        _transform.position = spawnPosition != null ? spawnPosition.position : Vector3.zero;
+        _transform.rotation = spawnPosition != null ? spawnPosition.rotation : Quaternion.identity;
         _rigidbody.constraints = RigidbodyConstraints.FreezeRotation;
 
         StartCoroutine(nameof(RandomRotationCoroutine));
     }
+
+    public void GetWasted()
+    {
+        Debug.Log("Wasted");
+        wasted = true;
+        _rigidbody.constraints = RigidbodyConstraints.None;
+
+        StopCoroutine(nameof(RandomRotationCoroutine));
+    }
+
+    public void Die()
+    {
+        Debug.Log("Die");
+        GetWasted();
+
+        PlayerDeath?.Invoke();
+    }
+
+    #endregion
+
+    #region Private
 
     private void CheckForRagdoll()
     {
@@ -65,16 +110,7 @@ public class CenterOfGravityMovement : MonoBehaviour
 
         if (!(Mathf.Abs(angles.x) > maxWalkingAngle) && !(Mathf.Abs(angles.y) > maxWalkingAngle)) return;
 
-        GetWasted();
-    }
-
-    private void GetWasted()
-    {
-        Debug.Log("Wasted");
-        _wasted = true;
-        _rigidbody.constraints = RigidbodyConstraints.None;
-
-        StopCoroutine(nameof(RandomRotationCoroutine));
+        Die();
     }
 
     private IEnumerator RandomRotationCoroutine()
@@ -92,7 +128,6 @@ public class CenterOfGravityMovement : MonoBehaviour
 
     private void SetRandomMovementVariables()
     {
-        Debug.Log("Updating random variables");
         _randomTimer = Random.Range(randomTimerRange.x, randomTimerRange.y);
         _randomRotateDirection = new Vector2(Random.value - .5f, Random.value - .5f).normalized;
     }
@@ -100,7 +135,7 @@ public class CenterOfGravityMovement : MonoBehaviour
     private void AddRandomRotation()
     {
         Vector3 rotationDirection = new Vector3(_randomRotateDirection.x, 0, _randomRotateDirection.y).normalized *
-                                    randomRotationSpeed * Time.deltaTime;
+                                    (randomRotationSpeed * Time.deltaTime);
 
         _transform.rotation *= Quaternion.Euler(rotationDirection);
     }
@@ -108,7 +143,8 @@ public class CenterOfGravityMovement : MonoBehaviour
     private void AddExtraRotation()
     {
         Vector2 angles = GetNegativeAllowedXZRotation();
-        Vector3 rotationDirection = new Vector3(angles.x, 0, angles.y).normalized * drunkRotationSpeed * Time.deltaTime;
+        Vector3 rotationDirection =
+            new Vector3(angles.x, 0, angles.y).normalized * (drunkRotationSpeed * Time.deltaTime);
 
         _transform.rotation *= Quaternion.Euler(rotationDirection);
     }
@@ -142,7 +178,7 @@ public class CenterOfGravityMovement : MonoBehaviour
             -Mathf.Clamp(xzAngles.y / maxWalkingAngle, -1, 1),
             0,
             Mathf.Clamp(xzAngles.x / maxWalkingAngle, -1, 1)
-        ) * maxMoveStrength * Time.deltaTime;
+        ) * (maxMoveStrength * Time.deltaTime);
 
         _rigidbody.velocity = Quaternion.Euler(0, _transform.rotation.eulerAngles.y, 0) * direction;
     }
@@ -170,4 +206,6 @@ public class CenterOfGravityMovement : MonoBehaviour
         if (Input.GetKey(KeyCode.E))
             _transform.RotateAround(transform.position, Vector3.up, turnSpeed);
     }
+
+    #endregion
 }
