@@ -15,18 +15,28 @@ public class Collectible : MonoBehaviour
     private GameObject _collectible;
     private Transform _transform;
 
-    // Start is called before the first frame update
-    void Start()
+    public static event Action Collected;
+
+    private void Start()
     {
         _transform = transform;
+
+        Init();
+    }
+
+    public void Init()
+    {
+        if (_collectible != null) Destroy(_collectible);
+
         _collectible = Instantiate(
             collectible,
             _transform
         );
+
+        gameObject.SetActive(true);
     }
 
-    // Update is called once per frame
-    void Update()
+    private void Update()
     {
         if (_collectible == null) return;
 
@@ -38,8 +48,11 @@ public class Collectible : MonoBehaviour
     private void OnTriggerEnter(Collider other)
     {
         if (_collectible == null) return;
-        
+
         Debug.Log("Collect");
+        Collected?.Invoke();
         Destroy(_collectible);
+
+        gameObject.SetActive(false);
     }
 }

@@ -13,7 +13,8 @@ public class MouseBasedCameraMovement : MonoBehaviour
     private void Start()
     {
         _virtualCamera = GetComponent<CinemachineVirtualCamera>();
-        if (_virtualCamera != null) _followTransform = _virtualCamera.Follow;
+        
+        _followTransform = _virtualCamera.Follow;
     }
 
     void Update()
